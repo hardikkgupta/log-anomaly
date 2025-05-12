@@ -1,0 +1,95 @@
+{
+  "definition": {
+    "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+    "actions": {
+      "Send_Teams_Message": {
+        "type": "ApiConnection",
+        "inputs": {
+          "host": {
+            "connection": {
+              "name": "@parameters('$connections')['teams']['connectionId']"
+            }
+          },
+          "method": "post",
+          "body": {
+            "body": "Anomaly detected in log metrics:\n\nSeverity: @{triggerBody()?['data']?['essentials']?['severity']}\nDescription: @{triggerBody()?['data']?['essentials']?['description']}\nTime: @{triggerBody()?['data']?['essentials']?['firedDateTime']}",
+            "subject": "Log Anomaly Alert"
+          },
+          "path": "/v1/teams/@{encodeURIComponent(parameters('teamId'))}/channels/@{encodeURIComponent(parameters('channelId'))}/messages"
+        }
+      },
+      "Send_Email": {
+        "type": "ApiConnection",
+        "inputs": {
+          "host": {
+            "connection": {
+              "name": "@parameters('$connections')['outlook']['connectionId']"
+            }
+          },
+          "method": "post",
+          "body": {
+            "Subject": "Log Anomaly Alert",
+            "Body": "Anomaly detected in log metrics:\n\nSeverity: @{triggerBody()?['data']?['essentials']?['severity']}\nDescription: @{triggerBody()?['data']?['essentials']?['description']}\nTime: @{triggerBody()?['data']?['essentials']?['firedDateTime']}",
+            "To": "@parameters('emailRecipients')"
+          },
+          "path": "/v2/Mail"
+        }
+      }
+    },
+    "triggers": {
+      "When_a_metric_alert_is_triggered": {
+        "type": "ApiConnectionWebhook",
+        "inputs": {
+          "host": {
+            "connection": {
+              "name": "@parameters('$connections')['azurediagnostics']['connectionId']"
+            }
+          },
+          "body": {
+            "callback_url": "@{listCallbackUrl()}"
+          },
+          "path": "/subscriptions/@{encodeURIComponent(parameters('subscriptionId'))}/providers/Microsoft.Insights/alertRules"
+        }
+      }
+    },
+    "parameters": {
+      "$connections": {
+        "defaultValue": {},
+        "type": "Object"
+      },
+      "subscriptionId": {
+        "type": "string"
+      },
+      "teamId": {
+        "type": "string"
+      },
+      "channelId": {
+        "type": "string"
+      },
+      "emailRecipients": {
+        "type": "string"
+      }
+    }
+  },
+  "parameters": {
+    "$connections": {
+      "value": {
+        "azurediagnostics": {
+          "connectionId": "[parameters('azurediagnostics-connectionId')]",
+          "connectionName": "azurediagnostics",
+          "id": "/subscriptions/@{encodeURIComponent(parameters('subscriptionId'))}/providers/Microsoft.Web/locations/@{encodeURIComponent(parameters('location'))}/managedApis/azurediagnostics"
+        },
+        "teams": {
+          "connectionId": "[parameters('teams-connectionId')]",
+          "connectionName": "teams",
+          "id": "/subscriptions/@{encodeURIComponent(parameters('subscriptionId'))}/providers/Microsoft.Web/locations/@{encodeURIComponent(parameters('location'))}/managedApis/teams"
+        },
+        "outlook": {
+          "connectionId": "[parameters('outlook-connectionId')]",
+          "connectionName": "outlook",
+          "id": "/subscriptions/@{encodeURIComponent(parameters('subscriptionId'))}/providers/Microsoft.Web/locations/@{encodeURIComponent(parameters('location'))}/managedApis/outlook"
+        }
+      }
+    }
+  }
+} 

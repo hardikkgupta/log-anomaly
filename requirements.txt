@@ -1,0 +1,4 @@
+azure-eventhub
+numpy
+azure-monitor
+azure-identity 
